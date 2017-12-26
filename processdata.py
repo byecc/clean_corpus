@@ -1,44 +1,11 @@
 import random
 import re
 import os
-from langconv import *
 import time
+from langconv import *
+from custom_structure import *
 
 random.seed(5)
-
-class Stack:
-    def __init__(self):
-        self.items = []
-
-    def isEmpty(self):
-        return len(self.items)==0
-
-    def push(self,item):
-        self.items.append(item)
-
-    def pop(self):
-        return self.items.pop()
-
-    def peek(self):
-        if not self.isEmpty():
-            return self.items[len(self.items)-1]
-        else:
-            # print('stack is empty')
-            return -1
-
-    def size(self):
-        return len(self.items)
-
-    def clean(self):
-        self.items = []
-
-class Paragraph:
-    def __init__(self):
-        self.sentences = []
-
-    def show(self):
-        for s in self.sentences:
-            print(s)
 
 class Process:
     def __init__(self):
@@ -138,28 +105,104 @@ class Process:
                     if ch == '”':  #只有”需要考虑前一位和后一位的情况，其他普遍情况只需考虑后一位
                         if r[i-1] in cut_list and i!=len(r)-1 and r[i+1] not in cut_list:
                             sentence = ''.join(sentence)
-                            p.sentences.append(sentence)
+                            p.sentences.append(re.sub(r'\s','',sentence))
                             sentence = []
                     elif ch=='.':
                         if i<len(r)-1 and not str(r[i+1]).isdigit():
                             ellip.append(ch)
                         if i<len(r)-1 and r[i+1]!='.'and len(ellip) >= 2 and r[i+1] not in cut_list:
                             sentence = ''.join(sentence)
-                            p.sentences.append(sentence)
+                            p.sentences.append(re.sub(r'\s','',sentence))
                             sentence = []
                             ellip = []
                     else:
                         if ch in cut_list and i<len(r)-1 and r[i+1] not in cut_list and r[i+1]!='.': #正常list append终止条件，该字符在cut_list，且下一个不在cut_list。考虑一下边界条件
                             sentence = ''.join(sentence)
-                            p.sentences.append(sentence)
+                            p.sentences.append(re.sub(r'\s','',sentence))
                             sentence = []
             if len(sentence)>0:     #段落结束无终止符，且句子长度大于0
                 sentence = ''.join(sentence)
-                p.sentences.append(sentence)
+                p.sentences.append(re.sub(r'\s','',sentence))
             punc_stack.clean()     #段落结束清空栈，防止句子中缺失pair
             paragraph_list.append(p)
         print("time:",time.time()-starttime)
         return paragraph_list
+
+    def extract_mark(self,paragraph_list):
+        mark_list = []
+        for p in paragraph_list:
+            for s in p.sentences:
+                mark = Mark()
+                subs_list = []
+                pos = 0
+                clean_sen = self.clean_sentence(s)
+                while pos < len(clean_sen):
+                    ch = clean_sen[pos]
+                    if ch==' ':
+                        pos+=1
+                        ch = clean_sen[pos]
+                        while ch != ' ':
+                            subs_list.append(ch)
+                            pos+=1
+                            ch = clean_sen[pos]
+                        sub = ''.join(subs_list)
+                        # print(clean_sen,'------',sub)
+                        assert len(sub.split('|||'))==2
+                        sub = sub.strip()
+                        mark.word_now.append(sub.split('|||')[0])
+                        mark.word_origin.append(sub.split('|||')[1])
+                        mark.label.append('o')
+                        mark.emo.append('o')
+                        subs_list = []
+                        pos+=1
+                    else:
+                        mark.word_now.append(ch)
+                        mark.word_origin.append(ch)
+                        mark.label.append('o')
+                        mark.emo.append('o')
+                        pos+=1
+                mark_list.append(mark)
+        return mark_list
+
+    def __sub_url(self,matched):
+        return " url|||"+matched.group("url")+" "
+
+    def __sub_number(self,matched):
+        return " number|||"+matched.group("number")+" "
+
+    def clean_sentence(self,sentence):
+        sentence = re.sub("(?P<url>(http://)?([0-9a-z]+\.)+[a-z]+(/[0-9a-z_.-]+)*)",self.__sub_url,sentence)
+        url_split = sentence.split(' ')
+        url_list = []
+        for i in range(len(url_split)):
+            if url_split[i].startswith("url|||"):
+                url_list.append(url_split[i])
+                url_split[i] = 'url|||'
+        sentence = ' '.join(url_split)
+        sentence = re.sub("(?P<number>([0-9]+\.?)*[0-9]+)",self.__sub_number,sentence)
+        url_split = sentence.split(' ')
+        j=0
+        for i in range(len(url_split)):
+            if url_split[i] == "url|||":
+                url_split[i] = url_list[j]
+                j+=1
+        assert j==len(url_list)
+        sentence = ' '.join(url_split)
+        return sentence
+
+    def write_mark(self,mark_list,mark_file,emo_file):
+        if not os.path.exists(mark_file):
+            with open(mark_file,'a',encoding='utf8') as f:
+                for m in mark_list:
+                    for i in range(len(m.word_now)):
+                        f.write(m.word_now[i]+'\t'+m.word_origin[i]+'\t'+m.label[i]+'\t'+m.emo[i]+'\n')
+                    f.write('\n')
+            print('write finish')
+        if not os.path.exists(emo_file):
+            with open(emo_file,'a',encoding='utf8') as f:
+                for i,m in enumerate(mark_list):
+                    f.write(str(i)+'\t'+str(len(m.word_now))+'\to\n')
+            print('write finish')
 
     '''
     句子长度统计：
