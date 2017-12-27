@@ -108,7 +108,7 @@ class Process:
                             p.sentences.append(re.sub(r'\s','',sentence))
                             sentence = []
                     elif ch=='.':
-                        if i<len(r)-1 and not str(r[i+1]).isdigit():
+                        if i<len(r)-1 and str(r[i+1]) == '.':
                             ellip.append(ch)
                         if i<len(r)-1 and r[i+1]!='.'and len(ellip) >= 2 and r[i+1] not in cut_list:
                             sentence = ''.join(sentence)
@@ -190,7 +190,7 @@ class Process:
         sentence = ' '.join(url_split)
         return sentence
 
-    def write_mark(self,mark_list,mark_file,emo_file):
+    def write_mark(self,mark_list,paragraph_list,mark_file,pgraph_file):
         if not os.path.exists(mark_file):
             with open(mark_file,'a',encoding='utf8') as f:
                 for m in mark_list:
@@ -198,10 +198,10 @@ class Process:
                         f.write(m.word_now[i]+'\t'+m.word_origin[i]+'\t'+m.label[i]+'\t'+m.emo[i]+'\n')
                     f.write('\n')
             print('write finish')
-        if not os.path.exists(emo_file):
-            with open(emo_file,'a',encoding='utf8') as f:
-                for i,m in enumerate(mark_list):
-                    f.write(str(i)+'\t'+str(len(m.word_now))+'\to\n')
+        if not os.path.exists(pgraph_file):
+            with open(pgraph_file,'a',encoding='utf8') as f:
+                for i,m in enumerate(paragraph_list):
+                    f.write(str(i)+'\t'+str(len(m.sentences))+'\to\n')
             print('write finish')
 
     '''
