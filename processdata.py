@@ -170,6 +170,9 @@ class Process:
     def __sub_number(self,matched):
         return " number|||"+matched.group("number")+" "
 
+    def __sub_single(self,matched):
+        return " single|||"+matched.group("single")+" "
+
     def clean_sentence(self,sentence):
         sentence = re.sub("(?P<url>(http://)?([0-9a-z]+\.)+[a-z]+(/[0-9a-z_.-]+)*)",self.__sub_url,sentence)
         url_split = sentence.split(' ')
@@ -177,13 +180,14 @@ class Process:
         for i in range(len(url_split)):
             if url_split[i].startswith("url|||"):
                 url_list.append(url_split[i])
-                url_split[i] = 'url|||'
+                url_split[i] = '$$$'
         sentence = ' '.join(url_split)
+        sentence = re.sub("(?P<single>[a-zA-Z]+\.?[a-zA-Z]+)",self.__sub_single,sentence)
         sentence = re.sub("(?P<number>([0-9]+\.?)*[0-9]+)",self.__sub_number,sentence)
         url_split = sentence.split(' ')
         j=0
         for i in range(len(url_split)):
-            if url_split[i] == "url|||":
+            if url_split[i] == "$$$":
                 url_split[i] = url_list[j]
                 j+=1
         assert j==len(url_list)
@@ -226,6 +230,3 @@ class Process:
             print(s)
             ss = s.split(' ')
             print(paragraph_list[int(ss[0])].sentences[int(ss[1])])
-
-# p = Process()
-# print(p.clean_srt("www.stcn.com/123.pfd）04,月           12日讯（601601）32.41%4月12日343.456晚說明檔案www.123.se.co，http://12.sd.we公司董事长高国富因工作变动的原因辞去董事职务，不再担任董事长及董事会战略与投资决策委员会主任职务。董事会提名孔庆伟顶替高国富为第八届董事会执行董事候选人。近日有媒体报导称，集团董事长孔庆伟将任党委书记一职，现任党委书记、董事长高国富任党委书记。（证券时报·e公司）"))
